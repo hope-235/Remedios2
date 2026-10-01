@@ -1,0 +1,66 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Backup app code
+        run: |
+          cp -r lib lib_backup
+          cp pubspec.yaml pubspec_backup.yaml
+
+      - name: Generate Flutter project scaffold
+        run: flutter create --platforms android --project-name remediosring .
+
+      - name: Restore app code over generated defaults
+        run: |
+          rm -rf lib
+          mv lib_backup lib
+          mv pubspec_backup.yaml pubspec.yaml
+
+      - name: Add Android permissions
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<application/i \
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>\
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\
+              <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>\
+              <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>\
+              <uses-permission android:name="android.permission.VIBRATE"/>' "$MANIFEST"
+
+      - name: Set minSdk to 21
+        run: |
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts 2>/dev/null || \
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle 2>/dev/null || true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: remediosring-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
