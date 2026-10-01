@@ -48,21 +48,54 @@ jobs:
               <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>\
               <uses-permission android:name="android.permission.VIBRATE"/>' "$MANIFEST"
 
-      - name: Set minSdk and enable core library desugaring
+      - name: Overwrite build.gradle.kts with desugaring support
         run: |
-          GRADLE="android/app/build.gradle.kts"
-          
-          # Set minSdk to 21
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' "$GRADLE"
-          
-          # Enable core library desugaring in compileOptions
-          sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' "$GRADLE"
-          
-          # Add desugaring dependency
-          sed -i '/dependencies {/a \    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' "$GRADLE"
-          
-          # Enable multiDex
-          sed -i '/defaultConfig {/a \        multiDexEnabled = true' "$GRADLE"
+          cat > android/app/build.gradle.kts << 'GRADLE_EOF'
+          plugins {
+              id("com.android.application")
+              id("kotlin-android")
+              id("dev.flutter.flutter-gradle-plugin")
+          }
+
+          android {
+              namespace = "com.example.remediosring"
+              compileSdk = flutter.compileSdkVersion
+              ndkVersion = flutter.ndkVersion
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_11
+                  targetCompatibility = JavaVersion.VERSION_11
+                  isCoreLibraryDesugaringEnabled = true
+              }
+
+              kotlinOptions {
+                  jvmTarget = JavaVersion.VERSION_11.toString()
+              }
+
+              defaultConfig {
+                  applicationId = "com.example.remediosring"
+                  minSdk = 21
+                  targetSdk = flutter.targetSdkVersion
+                  versionCode = flutter.versionCode
+                  versionName = flutter.versionName
+                  multiDexEnabled = true
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.getByName("debug")
+                  }
+              }
+          }
+
+          flutter {
+              source = "../.."
+          }
+
+          dependencies {
+              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+          }
+          GRADLE_EOF
 
       - name: Install dependencies
         run: flutter pub get
