@@ -48,54 +48,44 @@ jobs:
               <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>\
               <uses-permission android:name="android.permission.VIBRATE"/>' "$MANIFEST"
 
-      - name: Overwrite build.gradle.kts with desugaring support
+      - name: Patch build.gradle.kts for desugaring
         run: |
-          cat > android/app/build.gradle.kts << 'GRADLE_EOF'
-          plugins {
-              id("com.android.application")
-              id("kotlin-android")
-              id("dev.flutter.flutter-gradle-plugin")
-          }
+          python3 << 'PYEOF'
+          import re
 
-          android {
-              namespace = "com.example.remediosring"
-              compileSdk = flutter.compileSdkVersion
-              ndkVersion = flutter.ndkVersion
+          path = 'android/app/build.gradle.kts'
+          with open(path, 'r') as f:
+              content = f.read()
 
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_11
-                  targetCompatibility = JavaVersion.VERSION_11
-                  isCoreLibraryDesugaringEnabled = true
-              }
+          # Enable core library desugaring inside compileOptions
+          content = content.replace(
+              'compileOptions {',
+              'compileOptions {\n        isCoreLibraryDesugaringEnabled = true'
+          )
 
-              kotlinOptions {
-                  jvmTarget = JavaVersion.VERSION_11.toString()
-              }
+          # Set minSdk to 21
+          content = re.sub(r'minSdk\s*=\s*flutter\.minSdkVersion', 'minSdk = 21', content)
 
-              defaultConfig {
-                  applicationId = "com.example.remediosring"
-                  minSdk = 21
-                  targetSdk = flutter.targetSdkVersion
-                  versionCode = flutter.versionCode
-                  versionName = flutter.versionName
-                  multiDexEnabled = true
-              }
+          # Enable multiDex
+          content = content.replace(
+              'defaultConfig {',
+              'defaultConfig {\n        multiDexEnabled = true'
+          )
 
-              buildTypes {
-                  release {
-                      signingConfig = signingConfigs.getByName("debug")
-                  }
-              }
-          }
+          # Add desugaring dependency
+          if 'dependencies {' in content:
+              content = content.replace(
+                  'dependencies {',
+                  'dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")'
+              )
+          else:
+              content += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
 
-          flutter {
-              source = "../.."
-          }
+          with open(path, 'w') as f:
+              f.write(content)
 
-          dependencies {
-              coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-          }
-          GRADLE_EOF
+          print("build.gradle.kts patched successfully")
+          PYEOF
 
       - name: Install dependencies
         run: flutter pub get
