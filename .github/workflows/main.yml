@@ -48,10 +48,21 @@ jobs:
               <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>\
               <uses-permission android:name="android.permission.VIBRATE"/>' "$MANIFEST"
 
-      - name: Set minSdk to 21
+      - name: Set minSdk and enable core library desugaring
         run: |
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' android/app/build.gradle.kts 2>/dev/null || \
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 21/' android/app/build.gradle 2>/dev/null || true
+          GRADLE="android/app/build.gradle.kts"
+          
+          # Set minSdk to 21
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 21/' "$GRADLE"
+          
+          # Enable core library desugaring in compileOptions
+          sed -i '/compileOptions {/a \        isCoreLibraryDesugaringEnabled = true' "$GRADLE"
+          
+          # Add desugaring dependency
+          sed -i '/dependencies {/a \    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' "$GRADLE"
+          
+          # Enable multiDex
+          sed -i '/defaultConfig {/a \        multiDexEnabled = true' "$GRADLE"
 
       - name: Install dependencies
         run: flutter pub get
