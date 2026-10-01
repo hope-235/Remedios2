@@ -84,7 +84,7 @@ class RemediosRingApp extends StatelessWidget {
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -114,7 +114,7 @@ class RemediosRingApp extends StatelessWidget {
           letterSpacing: 1.1,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
